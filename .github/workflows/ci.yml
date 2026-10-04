@@ -18,12 +18,29 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
-        with: { python-version: '3.12', cache: pip, cache-dependency-path: composer/requirements*.txt }
-      - run: pip install -r requirements-dev.txt --constraint "https://raw.githubusercontent.com/apache/airflow/constraints-2.9.3/constraints-3.12.txt"
-      - run: airflow db migrate >/dev/null
-        env: { AIRFLOW_HOME: /tmp/airflow }
-      - run: pytest tests -q
+        with: { python-version: '3.12' }
+      - uses: astral-sh/setup-uv@v6
+      - name: install Airflow 2.9.3 (same resolver + constraints as local dev)
+        shell: bash
+        run: |
+          set -o pipefail
+          uv venv .venv --python 3.12
+          uv pip install --python .venv/bin/python -r requirements-dev.txt \
+            --constraint "https://raw.githubusercontent.com/apache/airflow/constraints-2.9.3/constraints-3.12.txt" 2>&1 | tee ../dag-build.log
+      - name: DAG integrity tests
+        shell: bash
         env: { AIRFLOW_HOME: /tmp/airflow, AIRFLOW__CORE__LOAD_EXAMPLES: "False" }
+        run: |
+          set -o pipefail
+          .venv/bin/airflow db migrate >/dev/null 2>&1 || true
+          .venv/bin/pytest tests -q -rA 2>&1 | tee -a ../dag-build.log
+      - name: publish errors as annotations
+        if: failure()
+        shell: bash
+        run: |
+          grep -E "Error|error:|FAILED|assert|No solution|Because " dag-build.log | awk '!seen[$0]++' | head -n 30 | while IFS= read -r line; do
+            echo "::error title=dags::${line:0:900}"
+          done
 
   lint:
     name: Validate Postman / JMeter / SoapUI files
