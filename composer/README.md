@@ -13,7 +13,8 @@ per-step retries and backfills (`airflow dags backfill -s 2026-09-01 -e 2026-09-
 ## Test locally
 ```bash
 python3 -m venv .venv && . .venv/bin/activate
-pip install -r requirements-dev.txt --constraint "https://raw.githubusercontent.com/apache/airflow/constraints-2.9.3/constraints-3.11.txt"
+pip install -r requirements-dev.txt --constraint "https://raw.githubusercontent.com/apache/airflow/constraints-2.9.3/constraints-3.12.txt"
+pip install --no-deps "apache-airflow-providers-apache-beam==5.7.1"   # import-only; Composer ships it
 pytest tests -q
 ```
 

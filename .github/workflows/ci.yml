@@ -27,6 +27,10 @@ jobs:
           uv venv .venv --python 3.12
           uv pip install --python .venv/bin/python -r requirements-dev.txt \
             --constraint "https://raw.githubusercontent.com/apache/airflow/constraints-2.9.3/constraints-3.12.txt" 2>&1 | tee ../dag-build.log
+          # The Google provider's Dataflow operators import the Beam *provider* module; the DAGs never
+          # run Beam locally, so install the provider without pulling apache-beam (which conflicts
+          # with the Airflow 2.9.3 constraints). Composer images ship both.
+          uv pip install --python .venv/bin/python --no-deps "apache-airflow-providers-apache-beam==5.7.1" 2>&1 | tee -a ../dag-build.log
       - name: DAG integrity tests
         shell: bash
         env: { AIRFLOW_HOME: /tmp/airflow, AIRFLOW__CORE__LOAD_EXAMPLES: "False" }
