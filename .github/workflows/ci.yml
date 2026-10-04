@@ -3,6 +3,8 @@ on:
   push: { branches: [main] }
   pull_request: {}
   workflow_dispatch: {}
+  schedule:
+    - cron: '23 8 * * 1-5'   # nightly API tests against the latest images
 
 permissions:
   contents: read
@@ -35,7 +37,8 @@ jobs:
   api-tests:
     name: Newman + JMeter against the local platform stack
     needs: [lint]
-    if: github.event_name != 'pull_request'
+    # Needs the service images in GHCR, which the other repos publish; run nightly or on demand.
+    if: github.event_name == 'workflow_dispatch' || github.event_name == 'schedule'
     runs-on: ubuntu-latest
     timeout-minutes: 30
     steps:
