@@ -1,0 +1,25 @@
+name: composer-sync
+# Uploads the DAGs to the Cloud Composer environment (only when enable_composer=true in tb-platform-infra).
+on:
+  workflow_dispatch: {}
+  push:
+    branches: [main]
+    paths: ['composer/dags/**']
+
+permissions: { contents: read, id-token: write }
+
+jobs:
+  sync:
+    if: vars.GCP_PROJECT_ID != '' && vars.COMPOSER_ENV != ''
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: google-github-actions/auth@v2
+        with:
+          workload_identity_provider: ${{ secrets.GCP_WIF_PROVIDER }}
+          service_account: ${{ secrets.GCP_DEPLOYER_SA }}
+      - uses: google-github-actions/setup-gcloud@v2
+      - run: |
+          gcloud composer environments storage dags import \
+            --environment "${{ vars.COMPOSER_ENV }}" --location "${{ vars.GCP_REGION || 'us-central1' }}" \
+            --project "${{ vars.GCP_PROJECT_ID }}" --source composer/dags/

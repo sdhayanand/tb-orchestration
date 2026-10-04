@@ -1,0 +1,7 @@
+# Matches the Composer image in tb-platform-infra terraform (composer-2.9.9-airflow-2.9.3).
+apache-airflow==2.9.3
+apache-airflow-providers-google>=10.21.0
+apache-airflow-providers-apache-beam==5.7.1
+pendulum>=3.0
+requests
+google-cloud-storage

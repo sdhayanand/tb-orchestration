@@ -1,0 +1,146 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<con:soapui-project id="7c1f3c7e-1d1a-4b8e-9b3a-0f8e2d4a6c01" activeEnvironment="Default" name="TB Legacy OMS + Order Intake SOAP" resourceRoot="${projectDir}" soapui-version="5.7.2" xmlns:con="http://eviware.com/soapui/config">
+  <con:settings/>
+  <con:properties>
+    <con:property><con:name>omsEndpoint</con:name><con:value>http://localhost:8089/ws</con:value></con:property>
+    <con:property><con:name>intakeEndpoint</con:name><con:value>http://localhost:8080/ws</con:value></con:property>
+    <con:property><con:name>orderNbr</con:name><con:value>LEG-SOAPUI-0001</con:value></con:property>
+  </con:properties>
+  <con:interface xsi:type="con:WsdlInterface" wsaVersion="NONE" name="OmsPortSoap11" type="wsdl" bindingName="{http://tailoredbrands.com/legacy/oms/v1}OmsPortSoap11" soapVersion="1_1" anonymous="optional" definition="http://localhost:8089/ws/oms.wsdl" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+    <con:settings/>
+    <con:definitionCache type="NO_CACHE" rootPart=""/>
+    <con:endpoints><con:endpoint>${#Project#omsEndpoint}</con:endpoint></con:endpoints>
+    <con:operation id="op-submit" isOneWay="false" action="" name="SubmitOrder" bindingOperationName="SubmitOrder" type="Request-Response" inputName="" receivesAttachments="false" sendsAttachments="false" anonymous="optional">
+      <con:settings/>
+      <con:call id="call-submit" name="SubmitOrder — tailored"><con:settings/><con:encoding>UTF-8</con:encoding><con:endpoint>${#Project#omsEndpoint}</con:endpoint>
+        <con:request><![CDATA[<soapenv:Envelope xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/" xmlns:v1="http://tailoredbrands.com/legacy/oms/v1">
+   <soapenv:Header/>
+   <soapenv:Body>
+      <v1:SubmitOrderRequest>
+         <v1:Order>
+            <v1:OrderNbr>${#Project#orderNbr}</v1:OrderNbr>
+            <v1:OrderType>T</v1:OrderType>
+            <v1:StoreNbr>0412</v1:StoreNbr>
+            <v1:CustNbr>C-SOAPUI</v1:CustNbr>
+            <v1:OrderDate>2026-10-04T09:30:00</v1:OrderDate>
+            <v1:Lines>
+               <v1:Line><v1:LineNbr>1</v1:LineNbr><v1:SKU>MW-SUIT-NAVY-42R</v1:SKU><v1:Qty>1</v1:Qty><v1:Price>599.99</v1:Price><v1:FulfillType>P</v1:FulfillType></v1:Line>
+               <v1:Line><v1:LineNbr>2</v1:LineNbr><v1:SKU>ALT-HEM-TROUSER</v1:SKU><v1:Qty>1</v1:Qty><v1:Price>50.00</v1:Price><v1:FulfillType>A</v1:FulfillType>
+                  <v1:Alteration><v1:Type>HEM</v1:Type><v1:MeasurementInches>31.5</v1:MeasurementInches><v1:TailorShopNbr>TS-EASTBAY</v1:TailorShopNbr></v1:Alteration>
+               </v1:Line>
+            </v1:Lines>
+         </v1:Order>
+      </v1:SubmitOrderRequest>
+   </soapenv:Body>
+</soapenv:Envelope>]]></con:request>
+        <con:wsaConfig mustUnderstand="NONE" version="200508" action=""/>
+      </con:call>
+    </con:operation>
+    <con:operation id="op-status" isOneWay="false" action="" name="GetOrderStatus" bindingOperationName="GetOrderStatus" type="Request-Response" inputName="" receivesAttachments="false" sendsAttachments="false" anonymous="optional">
+      <con:settings/>
+      <con:call id="call-status" name="GetOrderStatus"><con:settings/><con:encoding>UTF-8</con:encoding><con:endpoint>${#Project#omsEndpoint}</con:endpoint>
+        <con:request><![CDATA[<soapenv:Envelope xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/" xmlns:v1="http://tailoredbrands.com/legacy/oms/v1">
+   <soapenv:Body>
+      <v1:GetOrderStatusRequest>
+         <v1:OrderNbr>${#Project#orderNbr}</v1:OrderNbr>
+      </v1:GetOrderStatusRequest>
+   </soapenv:Body>
+</soapenv:Envelope>]]></con:request>
+        <con:wsaConfig mustUnderstand="NONE" version="200508" action=""/>
+      </con:call>
+    </con:operation>
+  </con:interface>
+  <con:testSuite id="ts-1" name="Legacy OMS contract">
+    <con:settings/>
+    <con:runType>SEQUENTIAL</con:runType>
+    <con:testCase id="tc-1" failOnError="true" failTestCaseOnErrors="true" keepSession="false" maxResults="0" name="Submit then query" searchProperties="true" timeout="0" wsrmEnabled="false" wsrmVersion="1.0" wsrmAckTo="" discardOkResults="false">
+      <con:settings/>
+      <con:testStep type="request" name="SubmitOrder" id="step-1">
+        <con:settings/>
+        <con:config xsi:type="con:RequestStep" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+          <con:interface>OmsPortSoap11</con:interface><con:operation>SubmitOrder</con:operation>
+          <con:request name="SubmitOrder" id="req-1"><con:settings/><con:encoding>UTF-8</con:encoding><con:endpoint>${#Project#omsEndpoint}</con:endpoint>
+            <con:request><![CDATA[<soapenv:Envelope xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/" xmlns:v1="http://tailoredbrands.com/legacy/oms/v1">
+   <soapenv:Body>
+      <v1:SubmitOrderRequest>
+         <v1:Order>
+            <v1:OrderNbr>${#Project#orderNbr}</v1:OrderNbr><v1:OrderType>T</v1:OrderType><v1:StoreNbr>0412</v1:StoreNbr><v1:CustNbr>C-SOAPUI</v1:CustNbr><v1:OrderDate>2026-10-04T09:30:00</v1:OrderDate>
+            <v1:Lines>
+               <v1:Line><v1:LineNbr>1</v1:LineNbr><v1:SKU>MW-SUIT-NAVY-42R</v1:SKU><v1:Qty>1</v1:Qty><v1:Price>599.99</v1:Price><v1:FulfillType>P</v1:FulfillType></v1:Line>
+            </v1:Lines>
+         </v1:Order>
+      </v1:SubmitOrderRequest>
+   </soapenv:Body>
+</soapenv:Envelope>]]></con:request>
+            <con:assertion type="SOAP Response" id="a-1" name="SOAP Response"/>
+            <con:assertion type="Not SOAP Fault" id="a-2" name="Not SOAP Fault"/>
+            <con:assertion type="Schema Compliance" id="a-3" name="Schema Compliance"><con:configuration><con:definition>http://localhost:8089/ws/oms.wsdl</con:definition></con:configuration></con:assertion>
+            <con:assertion type="XPath Match" id="a-4" name="Status NEW"><con:configuration><path>declare namespace v1='http://tailoredbrands.com/legacy/oms/v1'; //v1:SubmitOrderResponse/v1:Status</path><content>NEW</content><allowWildcards>true</allowWildcards><ignoreNamspaceDifferences>true</ignoreNamspaceDifferences><ignoreComments>false</ignoreComments></con:configuration></con:assertion>
+            <con:assertion type="Response SLA Assertion" id="a-5" name="SLA 1000 ms"><con:configuration><SLA>1000</SLA></con:configuration></con:assertion>
+            <con:wsaConfig mustUnderstand="NONE" version="200508" action=""/>
+          </con:request>
+        </con:config>
+      </con:testStep>
+      <con:testStep type="request" name="GetOrderStatus" id="step-2">
+        <con:settings/>
+        <con:config xsi:type="con:RequestStep" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+          <con:interface>OmsPortSoap11</con:interface><con:operation>GetOrderStatus</con:operation>
+          <con:request name="GetOrderStatus" id="req-2"><con:settings/><con:encoding>UTF-8</con:encoding><con:endpoint>${#Project#omsEndpoint}</con:endpoint>
+            <con:request><![CDATA[<soapenv:Envelope xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/" xmlns:v1="http://tailoredbrands.com/legacy/oms/v1">
+   <soapenv:Body><v1:GetOrderStatusRequest><v1:OrderNbr>${#Project#orderNbr}</v1:OrderNbr></v1:GetOrderStatusRequest></soapenv:Body>
+</soapenv:Envelope>]]></con:request>
+            <con:assertion type="SOAP Response" id="a-6" name="SOAP Response"/>
+            <con:assertion type="XPath Match" id="a-7" name="echoes OrderNbr"><con:configuration><path>declare namespace v1='http://tailoredbrands.com/legacy/oms/v1'; //v1:GetOrderStatusResponse/v1:OrderNbr</path><content>${#Project#orderNbr}</content><allowWildcards>true</allowWildcards><ignoreNamspaceDifferences>true</ignoreNamspaceDifferences></con:configuration></con:assertion>
+            <con:wsaConfig mustUnderstand="NONE" version="200508" action=""/>
+          </con:request>
+        </con:config>
+      </con:testStep>
+      <con:testStep type="request" name="SubmitOrder — invalid store (SOAP Fault expected)" id="step-3">
+        <con:settings/>
+        <con:config xsi:type="con:RequestStep" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+          <con:interface>OmsPortSoap11</con:interface><con:operation>SubmitOrder</con:operation>
+          <con:request name="SubmitOrder invalid" id="req-3"><con:settings/><con:encoding>UTF-8</con:encoding><con:endpoint>${#Project#omsEndpoint}</con:endpoint>
+            <con:request><![CDATA[<soapenv:Envelope xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/" xmlns:v1="http://tailoredbrands.com/legacy/oms/v1">
+   <soapenv:Body><v1:SubmitOrderRequest><v1:Order><v1:OrderNbr>BAD-1</v1:OrderNbr><v1:OrderType>T</v1:OrderType><v1:StoreNbr>99</v1:StoreNbr><v1:CustNbr>C</v1:CustNbr><v1:OrderDate>2026-10-04T09:30:00</v1:OrderDate><v1:Lines/></v1:Order></v1:SubmitOrderRequest></soapenv:Body>
+</soapenv:Envelope>]]></con:request>
+            <con:assertion type="SOAP Fault" id="a-8" name="SOAP Fault"/>
+            <con:wsaConfig mustUnderstand="NONE" version="200508" action=""/>
+          </con:request>
+        </con:config>
+      </con:testStep>
+      <con:properties/>
+    </con:testCase>
+    <con:properties/>
+  </con:testSuite>
+  <con:testSuite id="ts-2" name="Order intake SOAP adapter (XSLT path)">
+    <con:settings/>
+    <con:runType>SEQUENTIAL</con:runType>
+    <con:testCase id="tc-2" failOnError="true" failTestCaseOnErrors="true" keepSession="false" maxResults="0" name="Legacy XML into the new platform" searchProperties="true" timeout="0">
+      <con:settings/>
+      <con:testStep type="request" name="SubmitOrderRequest to order-intake-api /ws" id="step-4">
+        <con:settings/>
+        <con:config xsi:type="con:RequestStep" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+          <con:interface>OmsPortSoap11</con:interface><con:operation>SubmitOrder</con:operation>
+          <con:request name="intake" id="req-4"><con:settings/><con:encoding>UTF-8</con:encoding><con:endpoint>${#Project#intakeEndpoint}</con:endpoint>
+            <con:request><![CDATA[<soapenv:Envelope xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/" xmlns:v1="http://tailoredbrands.com/legacy/oms/v1">
+   <soapenv:Body>
+      <v1:SubmitOrderRequest>
+         <v1:Order>
+            <v1:OrderNbr>LEG-SOAPUI-INTAKE</v1:OrderNbr><v1:OrderType>R</v1:OrderType><v1:StoreNbr>0875</v1:StoreNbr><v1:CustNbr>C-SOAPUI</v1:CustNbr><v1:OrderDate>2026-10-04T09:30:00</v1:OrderDate>
+            <v1:Lines><v1:Line><v1:LineNbr>1</v1:LineNbr><v1:SKU>JAB-SHIRT-WHITE-16</v1:SKU><v1:Qty>2</v1:Qty><v1:Price>79.50</v1:Price><v1:FulfillType>P</v1:FulfillType></v1:Line></v1:Lines>
+         </v1:Order>
+      </v1:SubmitOrderRequest>
+   </soapenv:Body>
+</soapenv:Envelope>]]></con:request>
+            <con:assertion type="SOAP Response" id="a-9" name="SOAP Response"/>
+            <con:assertion type="Not SOAP Fault" id="a-10" name="Not SOAP Fault"/>
+            <con:assertion type="Simple Contains" id="a-11" name="contains SubmitOrderResponse"><con:configuration><token>SubmitOrderResponse</token><ignoreCase>false</ignoreCase><useRegEx>false</useRegEx></con:configuration></con:assertion>
+            <con:wsaConfig mustUnderstand="NONE" version="200508" action=""/>
+          </con:request>
+        </con:config>
+      </con:testStep>
+      <con:properties/>
+    </con:testCase>
+    <con:properties/>
+  </con:testSuite>
+</con:soapui-project>

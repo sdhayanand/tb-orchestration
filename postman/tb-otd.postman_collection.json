@@ -1,0 +1,830 @@
+{
+  "info": {
+    "_postman_id": "6881c504-193a-4b5a-aaec-cfd1380e383e",
+    "name": "TB OTD \u2014 Order-to-Delivery integration platform",
+    "description": "Contract + smoke tests for the order intake API (REST + SOAP), inventory, carrier webhook and legacy simulators. Run with Newman: `newman run tb-otd.postman_collection.json -e local.postman_environment.json`.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "orderId",
+      "value": ""
+    }
+  ],
+  "item": [
+    {
+      "name": "0 Health",
+      "item": [
+        {
+          "name": "order-intake-api readiness",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{apiUrl}}/actuator/health/readiness",
+              "host": [
+                "{{apiUrl}}"
+              ],
+              "path": [
+                "actuator",
+                "health",
+                "readiness"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200 UP', () => { pm.response.to.have.status(200); pm.expect(pm.response.json().status).to.eql('UP'); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "inventory-service readiness",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{inventoryUrl}}/actuator/health/readiness",
+              "host": [
+                "{{inventoryUrl}}"
+              ],
+              "path": [
+                "actuator",
+                "health",
+                "readiness"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200', () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "shipment-webhook readiness",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{webhookUrl}}/actuator/health/readiness",
+              "host": [
+                "{{webhookUrl}}"
+              ],
+              "path": [
+                "actuator",
+                "health",
+                "readiness"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200', () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "OpenAPI document",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{apiUrl}}/v3/api-docs",
+              "host": [
+                "{{apiUrl}}"
+              ],
+              "path": [
+                "v3",
+                "api-docs"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('openapi 3', () => pm.expect(pm.response.json().openapi).to.match(/^3\\./));",
+                  "pm.test('has POST /v1/orders', () => pm.expect(pm.response.json().paths['/v1/orders'].post).to.be.an('object'));"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "1 Orders (REST)",
+      "item": [
+        {
+          "name": "Create order (201)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "X-Correlation-Id",
+                "value": "postman-{{$guid}}"
+              },
+              {
+                "key": "x-api-key",
+                "value": "{{apiKey}}"
+              }
+            ],
+            "url": {
+              "raw": "{{apiUrl}}/v1/orders",
+              "host": [
+                "{{apiUrl}}"
+              ],
+              "path": [
+                "v1",
+                "orders"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"orderType\": \"TAILORED\",\n  \"channel\": \"STORE\",\n  \"storeId\": \"0412\",\n  \"customerId\": \"C-POSTMAN\",\n  \"promisedDate\": \"2026-12-24\",\n  \"lines\": [\n    {\n      \"sku\": \"MW-SUIT-NAVY-42R\",\n      \"quantity\": 1,\n      \"unitPrice\": 599.99,\n      \"fulfillmentType\": \"STORE_PICKUP\"\n    },\n    {\n      \"sku\": \"ALT-HEM-TROUSER\",\n      \"quantity\": 1,\n      \"unitPrice\": 50.0,\n      \"fulfillmentType\": \"ALTERATION\",\n      \"alteration\": {\n        \"type\": \"HEM\",\n        \"measurementInches\": 31.5,\n        \"tailorShopId\": \"TS-EASTBAY\"\n      }\n    }\n  ]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('201 Created', () => pm.response.to.have.status(201));",
+                  "const b = pm.response.json(); pm.test('orderId format', () => pm.expect(b.orderId).to.match(/^ORD-\\d{4}-\\d{6}$/));",
+                  "pm.test('status CREATED', () => pm.expect(b.status).to.eql('CREATED'));",
+                  "pm.test('Location header', () => pm.expect(pm.response.headers.get('Location')).to.include(b.orderId));",
+                  "pm.collectionVariables.set('orderId', b.orderId);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Get order (poll until RESERVED)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "x-api-key",
+                "value": "{{apiKey}}"
+              }
+            ],
+            "url": {
+              "raw": "{{apiUrl}}/v1/orders/{{orderId}}",
+              "host": [
+                "{{apiUrl}}"
+              ],
+              "path": [
+                "v1",
+                "orders",
+                "{{orderId}}"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200', () => pm.response.to.have.status(200));",
+                  "const b = pm.response.json(); pm.test('lines round-trip', () => pm.expect(b.lines).to.have.lengthOf(2));",
+                  "const attempt = Number(pm.collectionVariables.get('pollAttempt') || 0);",
+                  "if (b.status !== 'RESERVED' && attempt < 20) { pm.collectionVariables.set('pollAttempt', attempt + 1); setTimeout(() => {}, 1500); postman.setNextRequest('Get order (poll until RESERVED)'); }",
+                  "else { pm.collectionVariables.set('pollAttempt', 0); pm.test('status RESERVED via inventory-service', () => pm.expect(b.status).to.eql('RESERVED')); }"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Validation: missing lines (400 problem+json)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "X-Correlation-Id",
+                "value": "postman-{{$guid}}"
+              },
+              {
+                "key": "x-api-key",
+                "value": "{{apiKey}}"
+              }
+            ],
+            "url": {
+              "raw": "{{apiUrl}}/v1/orders",
+              "host": [
+                "{{apiUrl}}"
+              ],
+              "path": [
+                "v1",
+                "orders"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"orderType\": \"RETAIL\",\n  \"storeId\": \"0412\",\n  \"lines\": []\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('400', () => pm.response.to.have.status(400));",
+                  "pm.test('problem+json', () => pm.expect(pm.response.headers.get('Content-Type')).to.include('problem+json'));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Validation: bad storeId (400)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "X-Correlation-Id",
+                "value": "postman-{{$guid}}"
+              },
+              {
+                "key": "x-api-key",
+                "value": "{{apiKey}}"
+              }
+            ],
+            "url": {
+              "raw": "{{apiUrl}}/v1/orders",
+              "host": [
+                "{{apiUrl}}"
+              ],
+              "path": [
+                "v1",
+                "orders"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"orderType\": \"TAILORED\",\n  \"channel\": \"STORE\",\n  \"storeId\": \"12\",\n  \"customerId\": \"C-POSTMAN\",\n  \"promisedDate\": \"2026-12-24\",\n  \"lines\": [\n    {\n      \"sku\": \"MW-SUIT-NAVY-42R\",\n      \"quantity\": 1,\n      \"unitPrice\": 599.99,\n      \"fulfillmentType\": \"STORE_PICKUP\"\n    },\n    {\n      \"sku\": \"ALT-HEM-TROUSER\",\n      \"quantity\": 1,\n      \"unitPrice\": 50.0,\n      \"fulfillmentType\": \"ALTERATION\",\n      \"alteration\": {\n        \"type\": \"HEM\",\n        \"measurementInches\": 31.5,\n        \"tailorShopId\": \"TS-EASTBAY\"\n      }\n    }\n  ]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('400', () => pm.response.to.have.status(400));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Unknown order (404)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{apiUrl}}/v1/orders/ORD-1999-000000",
+              "host": [
+                "{{apiUrl}}"
+              ],
+              "path": [
+                "v1",
+                "orders",
+                "ORD-1999-000000"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('404', () => pm.response.to.have.status(404));"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "2 Legacy SOAP / XSLT",
+      "item": [
+        {
+          "name": "WSDL",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{apiUrl}}/ws/orders.wsdl",
+              "host": [
+                "{{apiUrl}}"
+              ],
+              "path": [
+                "ws",
+                "orders.wsdl"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('wsdl', () => pm.expect(pm.response.text()).to.include('definitions'));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "SubmitOrderRequest (SOAP 1.1)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "text/xml;charset=UTF-8"
+              },
+              {
+                "key": "SOAPAction",
+                "value": ""
+              }
+            ],
+            "url": {
+              "raw": "{{apiUrl}}/ws",
+              "host": [
+                "{{apiUrl}}"
+              ],
+              "path": [
+                "ws"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "<soapenv:Envelope xmlns:soapenv=\"http://schemas.xmlsoap.org/soap/envelope/\" xmlns:v1=\"http://tailoredbrands.com/legacy/oms/v1\">\n  <soapenv:Body>\n    <v1:SubmitOrderRequest>\n      <v1:Order>\n        <v1:OrderNbr>LEG-PM-{{$timestamp}}</v1:OrderNbr><v1:OrderType>T</v1:OrderType><v1:StoreNbr>0875</v1:StoreNbr>\n        <v1:CustNbr>C-SOAP</v1:CustNbr><v1:OrderDate>2026-10-04T10:00:00</v1:OrderDate>\n        <v1:Lines>\n          <v1:Line><v1:LineNbr>1</v1:LineNbr><v1:SKU>MW-SUIT-CHARCOAL-40R</v1:SKU><v1:Qty>1</v1:Qty><v1:Price>649.99</v1:Price><v1:FulfillType>P</v1:FulfillType></v1:Line>\n          <v1:Line><v1:LineNbr>2</v1:LineNbr><v1:SKU>ALT-HEM-TROUSER</v1:SKU><v1:Qty>1</v1:Qty><v1:Price>50.00</v1:Price><v1:FulfillType>A</v1:FulfillType>\n            <v1:Alteration><v1:Type>HEM</v1:Type><v1:MeasurementInches>32</v1:MeasurementInches><v1:TailorShopNbr>TS-EASTBAY</v1:TailorShopNbr></v1:Alteration></v1:Line>\n        </v1:Lines>\n      </v1:Order>\n    </v1:SubmitOrderRequest>\n  </soapenv:Body>\n</soapenv:Envelope>",
+              "options": {
+                "raw": {
+                  "language": "xml"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200', () => pm.response.to.have.status(200));",
+                  "pm.test('SubmitOrderResponse', () => pm.expect(pm.response.text()).to.include('SubmitOrderResponse'));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Transform legacy XML -> canonical JSON",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/xml"
+              }
+            ],
+            "url": {
+              "raw": "{{apiUrl}}/v1/legacy/transform",
+              "host": [
+                "{{apiUrl}}"
+              ],
+              "path": [
+                "v1",
+                "legacy",
+                "transform"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "<Order><OrderNbr>LEG-1</OrderNbr><OrderType>X</OrderType><StoreNbr>0875</StoreNbr><CustNbr>C-9</CustNbr><OrderDate>2026-10-04T10:00:00</OrderDate><Lines><Line><LineNbr>1</LineNbr><SKU>RNT-TUX-BLACK-40R</SKU><Qty>1</Qty><Price>199.00</Price><FulfillType>S</FulfillType></Line></Lines></Order>",
+              "options": {
+                "raw": {
+                  "language": "xml"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200', () => pm.response.to.have.status(200));",
+                  "const b = pm.response.json(); pm.test('X -> RENTAL', () => pm.expect(b.orderType).to.eql('RENTAL'));",
+                  "pm.test('S -> SHIP_TO_HOME', () => pm.expect(b.lines[0].fulfillmentType).to.eql('SHIP_TO_HOME'));"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "3 Inventory",
+      "item": [
+        {
+          "name": "Availability by SKU",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{inventoryUrl}}/v1/inventory/MW-SUIT-NAVY-42R",
+              "host": [
+                "{{inventoryUrl}}"
+              ],
+              "path": [
+                "v1",
+                "inventory",
+                "MW-SUIT-NAVY-42R"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200', () => pm.response.to.have.status(200));",
+                  "const b = pm.response.json(); pm.test('locations', () => pm.expect(b.locations.length).to.be.above(0));",
+                  "pm.test('reserved > 0 after the order', () => pm.expect(b.locations.reduce((a,l)=>a+l.reserved,0)).to.be.above(0));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Unknown SKU (404)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{inventoryUrl}}/v1/inventory/NOPE-123",
+              "host": [
+                "{{inventoryUrl}}"
+              ],
+              "path": [
+                "v1",
+                "inventory",
+                "NOPE-123"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('404', () => pm.response.to.have.status(404));"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "4 Carrier webhook (HMAC)",
+      "item": [
+        {
+          "name": "UPS out-for-delivery (signed, 202)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "X-Carrier-Signature",
+                "value": "sha256={{sig}}"
+              }
+            ],
+            "url": {
+              "raw": "{{webhookUrl}}/v1/carriers/UPS/events",
+              "host": [
+                "{{webhookUrl}}"
+              ],
+              "path": [
+                "v1",
+                "carriers",
+                "UPS",
+                "events"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\"trackingNumber\":\"1Z999AA10123456784\",\"localActivityDate\":\"20261004\",\"localActivityTime\":\"081500\",\"gmtOffset\":\"-07:00\",\"activityStatus\":{\"type\":\"I\",\"code\":\"OT\",\"description\":\"Out For Delivery Today\"},\"activityLocation\":{\"city\":\"Dublin\",\"stateProvince\":\"CA\",\"countryCode\":\"US\"},\"referenceNumbers\":[{\"code\":\"PO\",\"value\":\"{{orderId}}\"}]}",
+              "options": {
+                "raw": {
+                  "language": "xml"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const body = pm.request.body.raw.replace('{{orderId}}', pm.collectionVariables.get('orderId'));",
+                  "pm.request.body.raw = body;",
+                  "const sig = CryptoJS.HmacSHA256(body, pm.environment.get('webhookSecret')).toString(CryptoJS.enc.Hex);",
+                  "pm.variables.set('sig', sig);"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('202 Accepted', () => pm.response.to.have.status(202));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Bad signature (401)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "X-Carrier-Signature",
+                "value": "sha256=deadbeef"
+              }
+            ],
+            "url": {
+              "raw": "{{webhookUrl}}/v1/carriers/UPS/events",
+              "host": [
+                "{{webhookUrl}}"
+              ],
+              "path": [
+                "v1",
+                "carriers",
+                "UPS",
+                "events"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\"trackingNumber\":\"1Z999AA10123456784\",\"localActivityDate\":\"20261004\",\"localActivityTime\":\"081500\",\"gmtOffset\":\"-07:00\",\"activityStatus\":{\"type\":\"I\",\"code\":\"OT\",\"description\":\"Out For Delivery Today\"},\"activityLocation\":{\"city\":\"Dublin\",\"stateProvince\":\"CA\",\"countryCode\":\"US\"},\"referenceNumbers\":[{\"code\":\"PO\",\"value\":\"{{orderId}}\"}]}",
+              "options": {
+                "raw": {
+                  "language": "xml"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('401/403', () => pm.expect([401,403]).to.include(pm.response.code));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Unknown carrier (404)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "X-Carrier-Signature",
+                "value": "sha256=00"
+              }
+            ],
+            "url": {
+              "raw": "{{webhookUrl}}/v1/carriers/DHL/events",
+              "host": [
+                "{{webhookUrl}}"
+              ],
+              "path": [
+                "v1",
+                "carriers",
+                "DHL",
+                "events"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\"trackingNumber\":\"1Z999AA10123456784\",\"localActivityDate\":\"20261004\",\"localActivityTime\":\"081500\",\"gmtOffset\":\"-07:00\",\"activityStatus\":{\"type\":\"I\",\"code\":\"OT\",\"description\":\"Out For Delivery Today\"},\"activityLocation\":{\"city\":\"Dublin\",\"stateProvince\":\"CA\",\"countryCode\":\"US\"},\"referenceNumbers\":[{\"code\":\"PO\",\"value\":\"{{orderId}}\"}]}",
+              "options": {
+                "raw": {
+                  "language": "xml"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('4xx', () => pm.expect(pm.response.code).to.be.within(400, 404));"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "5 Legacy simulators",
+      "item": [
+        {
+          "name": "EMS stand-in: publish 2 legacy orders",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{emsUrl}}/simulate/orders?count=2",
+              "host": [
+                "{{emsUrl}}"
+              ],
+              "path": [
+                "simulate",
+                "orders?count=2"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200', () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "EMS stand-in: stats",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{emsUrl}}/stats",
+              "host": [
+                "{{emsUrl}}"
+              ],
+              "path": [
+                "stats"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200', () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "ERP (MQ consumer): received the REST order",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{erpUrl}}/received/{{orderId}}",
+              "host": [
+                "{{erpUrl}}"
+              ],
+              "path": [
+                "received",
+                "{{orderId}}"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('ERP received it via pubsub-to-jms-bridge', () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Legacy OMS SOAP: WSDL",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{omsUrl}}/ws/oms.wsdl",
+              "host": [
+                "{{omsUrl}}"
+              ],
+              "path": [
+                "ws",
+                "oms.wsdl"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('wsdl', () => pm.expect(pm.response.text()).to.include('definitions'));"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}
