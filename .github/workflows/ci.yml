@@ -82,16 +82,31 @@ jobs:
           npm i -g newman newman-reporter-htmlextra
           newman run postman/tb-otd.postman_collection.json -e postman/local.postman_environment.json \
             --delay-request 1500 --timeout-request 20000 -r cli,htmlextra --reporter-htmlextra-export reports/newman.html
+      - name: cache JMeter
+        uses: actions/cache@v4
+        with:
+          path: /tmp/apache-jmeter-5.6.3
+          key: jmeter-5.6.3
+      - name: install JMeter (CDN first; the archive mirror took 11 minutes)
+        run: |
+          [ -x /tmp/apache-jmeter-5.6.3/bin/jmeter ] && exit 0
+          for u in https://dlcdn.apache.org/jmeter/binaries/apache-jmeter-5.6.3.tgz \
+                   https://archive.apache.org/dist/jmeter/binaries/apache-jmeter-5.6.3.tgz; do
+            curl -fsSL --retry 3 --max-time 300 "$u" | tar xz -C /tmp && exit 0
+          done
+          exit 1
       - name: JMeter smoke profile
         run: |
-          curl -fsSL https://archive.apache.org/dist/jmeter/binaries/apache-jmeter-5.6.3.tgz | tar xz -C /tmp
-          cd jmeter && /tmp/apache-jmeter-5.6.3/bin/jmeter -n -t order-intake-load.jmx -l ../reports/results.jtl -e -o ../reports/jmeter \
-            -Jhost=localhost -Jport=8080 -Jusers=5 -Jramp=5 -Jloops=5
+          mkdir -p reports
+          (cd jmeter && /tmp/apache-jmeter-5.6.3/bin/jmeter -n -t order-intake-load.jmx -l ../reports/results.jtl -e -o ../reports/jmeter \
+            -Jhost=localhost -Jport=8080 -Jusers=5 -Jramp=5 -Jloops=5 -JmaxMs=1500)
           python3 - <<'EOF'
-          import csv
+          import csv, collections
           rows = list(csv.DictReader(open('reports/results.jtl')))
           errs = [r for r in rows if r['success'] != 'true']
           print(f"samples={len(rows)} errors={len(errs)}")
+          for (label, code, msg), n in collections.Counter((r['label'], r['responseCode'], (r.get('failureMessage') or '')[:200]) for r in errs).most_common(10):
+              print(f"::error title=jmeter::{n}x {label} -> {code} {msg}")
           assert rows and len(errs) * 100.0 / len(rows) < 1.0, "error rate >= 1%"
           EOF
       - name: SoapUI (open-source runner)

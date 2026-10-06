@@ -32,7 +32,7 @@
       </ThreadGroup>
       <hashTree>
         <CSVDataSet guiclass="TestBeanGUI" testclass="CSVDataSet" testname="stores + skus (orders.csv)" enabled="true">
-          <stringProp name="delimiter">,</stringProp>
+          <stringProp name="delimiter">|</stringProp>
           <stringProp name="fileEncoding">UTF-8</stringProp>
           <stringProp name="filename">orders.csv</stringProp>
           <boolProp name="ignoreFirstLine">true</boolProp>
@@ -40,7 +40,7 @@
           <boolProp name="recycle">true</boolProp>
           <stringProp name="shareMode">shareMode.all</stringProp>
           <boolProp name="stopThread">false</boolProp>
-          <stringProp name="variableNames">storeId,orderType,sku,price,fulfillmentType</stringProp>
+          <stringProp name="variableNames">storeId,orderType,channel,sku,price,fulfillmentType,extra</stringProp>
         </CSVDataSet>
         <hashTree/>
         <HeaderManager guiclass="HeaderPanel" testclass="HeaderManager" testname="HTTP Header Manager" enabled="true">
@@ -58,7 +58,7 @@
             <collectionProp name="Arguments.arguments">
               <elementProp name="" elementType="HTTPArgument">
                 <boolProp name="HTTPArgument.always_encode">false</boolProp>
-                <stringProp name="Argument.value">{"orderType":"${orderType}","channel":"STORE","storeId":"${storeId}","customerId":"C-JM-${__threadNum}","lines":[{"sku":"${sku}","quantity":1,"unitPrice":${price},"fulfillmentType":"${fulfillmentType}"}]}</stringProp>
+                <stringProp name="Argument.value">{"orderType":"${orderType}","channel":"${channel}","storeId":"${storeId}","customerId":"C-JM-${__threadNum}","lines":[{"sku":"${sku}","quantity":1,"unitPrice":${price},"fulfillmentType":"${fulfillmentType}"}]${extra}}</stringProp>
                 <stringProp name="Argument.metadata">=</stringProp>
               </elementProp>
             </collectionProp>
@@ -91,7 +91,7 @@
           </JSONPathAssertion>
           <hashTree/>
           <DurationAssertion guiclass="DurationAssertionGui" testclass="DurationAssertion" testname="&lt; 500 ms" enabled="true">
-            <stringProp name="DurationAssertion.duration">500</stringProp>
+            <stringProp name="DurationAssertion.duration">${__P(maxMs,500)}</stringProp>
           </DurationAssertion>
           <hashTree/>
           <JSONPostProcessor guiclass="JSONPostProcessorGui" testclass="JSONPostProcessor" testname="extract orderId" enabled="true">
